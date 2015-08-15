@@ -14,17 +14,15 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <string.h>                /* strcmp() */
-#include <stdlib.h>                /* strtoul() */
-#include <unistd.h>                /* close() */
 
 int g_size = 4;
-unsigned long int g_paddr;
+unsigned long g_paddr;
 int g_is_write;
 uint32_t g_value = 0;
 uint32_t g_count = 1;
@@ -57,7 +55,7 @@ int parse_cmdline(int argc, char ** argv)
 	if (!g_paddr)
 		return -1;
 
-	if ( ( str = strchr(argv[cur_arg], '=') ) ) {
+	if ( str = strchr(argv[cur_arg], '=') ) {
 		g_is_write = 1;
 		if (strlen(str) > 1) {
 			str++;
@@ -99,7 +97,7 @@ void read_mem(void * addr, uint32_t count, uint32_t size)
 		case 1:
 			for (i = 0; i < count; i++) {
 				if ( (i % 16) == 0 )
-					printf("\n0x%08X: ", (uint)g_paddr);
+					printf("\n0x%08lX: ", g_paddr);
 				printf(" %02X", addr8[i]);
 				g_paddr++;
 			}
@@ -107,7 +105,7 @@ void read_mem(void * addr, uint32_t count, uint32_t size)
 		case 2:
 			for (i = 0; i < count; i++) {
 				if ( (i % 8) == 0 )
-					printf("\n0x%08X: ", (uint)g_paddr);
+					printf("\n0x%08lX: ", g_paddr);
 				printf(" %04X", addr16[i]);
 				g_paddr += 2;
 			}
@@ -115,7 +113,7 @@ void read_mem(void * addr, uint32_t count, uint32_t size)
 		case 4:
 			for (i = 0; i < count; i++) {
 				if ( (i % 4) == 0 )
-					printf("\n0x%08X: ", (uint)g_paddr);
+					printf("\n0x%08lX: ", g_paddr);
 				printf(" %08X", addr32[i]);
 				g_paddr += 4;
 			}
@@ -127,6 +125,7 @@ void read_mem(void * addr, uint32_t count, uint32_t size)
 
 void write_mem(void * addr, uint32_t value, uint32_t size)
 {
+	int i;
 	uint8_t * addr8 = addr;
 	uint16_t * addr16 = addr;
 	uint32_t * addr32 = addr;
@@ -169,16 +168,12 @@ int main(int argc, char **argv)
 	aligned_size = (aligned_size + 4096 - 1) & ~(4096 - 1);
 
 	if (g_is_write)
-		printf("Writing %d-bit value 0x%X to address 0x%08X\n",
-			g_size*8, g_value, (uint)g_paddr);
+		printf("Writing %d-bit value 0x%X to address 0x%08lX\n", g_size*8, g_value, g_paddr);
 	else
-		printf("Reading 0x%X count starting at address 0x%08X\n",
-			g_count, (uint)g_paddr);
+		printf("Reading 0x%X count starting at address 0x%08lX\n", g_count, g_paddr);
 
-	if ((fd = open("/dev/mem", O_RDWR, 0)) < 0) {
-		printf("Open /dev/mem error, maybe check permission.\n");
+	if ((fd = open("/dev/mem", O_RDWR, 0)) < 0)
 		return 1;
-	}
 
 	aligned_vaddr = mmap(NULL, aligned_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, aligned_paddr);
 	if (aligned_vaddr == NULL) {
@@ -200,3 +195,4 @@ int main(int argc, char **argv)
 	close(fd);
 	return 0;
 }
+
